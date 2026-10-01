@@ -32,7 +32,24 @@
   <!-- App Shell -->
   <div class="app">
 
-    <!-- Header -->
+    <!-- Hero Image -->
+    <div class="hero-image-wrap">
+      <img class="hero-img" src="assets/images/hero.jpg" alt="Mi Calendario de Amor" draggable="false">
+      <div class="hero-text">
+        <span class="hero-script">Mi Calendario de Amor</span>
+        <span class="hero-sub">Tu espacio para lo que más importa</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-notify-status" id="btnNotifyStatus" title="Estado de notificaciones" style="display:none">
+          <span id="notifyStatusIcon">🔕</span>
+        </button>
+        <button class="btn-add-event" id="btnAddEvent" title="Agregar evento">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sticky Header (visible when scrolled past hero) -->
     <header class="app-header">
       <div class="header-inner">
         <div class="header-title">
@@ -40,10 +57,10 @@
           <span class="header-heart">💖</span>
         </div>
         <div class="header-actions">
-          <button class="btn-notify-status" id="btnNotifyStatus" title="Estado de notificaciones" style="display:none">
-            <span id="notifyStatusIcon">🔕</span>
+          <button class="btn-notify-status-2" id="btnNotifyStatus2" title="Estado de notificaciones" style="display:none">
+            <span id="notifyStatusIcon2">🔕</span>
           </button>
-          <button class="btn-add-event" id="btnAddEvent" title="Agregar evento">
+          <button class="btn-add-event" id="btnAddEvent2" title="Agregar evento">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>

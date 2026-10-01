@@ -577,7 +577,8 @@ document.getElementById('closeDayModal').addEventListener('click',   () => close
 document.getElementById('closeNoteModal').addEventListener('click',  () => closeModal('noteModal'));
 document.getElementById('cancelNoteBtn').addEventListener('click',   () => closeModal('noteModal'));
 
-document.getElementById('btnAddEvent').addEventListener('click', () => { vibrate(VIBRATE.gentle); openAddModal(); });
+document.getElementById('btnAddEvent').addEventListener('click',  () => { vibrate(VIBRATE.gentle); openAddModal(); });
+document.getElementById('btnAddEvent2')?.addEventListener('click', () => { vibrate(VIBRATE.gentle); openAddModal(); });
 document.getElementById('btnAddNote').addEventListener('click',  () => { vibrate(VIBRATE.gentle); openModal('noteModal'); });
 
 document.getElementById('btnAddInDay').addEventListener('click', () => {
@@ -658,6 +659,28 @@ function formatDate(str) {
   if (!str) return '';
   return new Date(str).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
 }
+
+// ── Sticky header reveal on scroll ───────────────────────────
+(function initStickyHeader() {
+  const header = document.querySelector('.app-header');
+  const hero   = document.querySelector('.hero-image-wrap');
+  if (!header || !hero) return;
+
+  // Start hidden — show only after scrolling past the hero
+  header.style.opacity = '0';
+  header.style.transform = 'translateY(-100%)';
+  header.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      const past = !entry.isIntersecting;
+      header.style.opacity   = past ? '1' : '0';
+      header.style.transform = past ? 'translateY(0)' : 'translateY(-100%)';
+    },
+    { threshold: 0.1 }
+  );
+  observer.observe(hero);
+})();
 
 // ── Init ─────────────────────────────────────────────────────
 (async function init() {
