@@ -1,0 +1,19 @@
+{
+  "name": "Mi Calendario de Amor",
+  "short_name": "Calendario 💖",
+  "description": "Tu calendario romántico personal con eventos, notas de amor y recordatorios",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0810",
+  "theme_color": "#0d0810",
+  "orientation": "portrait",
+  "categories": ["lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231a0a12'/><text y='72' x='50' text-anchor='middle' font-size='68'>💖</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -3,19 +3,61 @@
 
 const API = 'api.php';
 
+// ── Vibration Patterns ───────────────────────────────────────
+const VIBRATE = {
+  gentle:      [100, 50, 100],
+  event:       [150, 75, 150],
+  love:        [100, 50, 100, 50, 300],
+  anniversary: [200, 100, 200, 100, 500],
+  birthday:    [150, 75, 150, 75, 300],
+  holiday:     [200, 100, 200, 100, 200],
+  celebrate:   [100, 50, 100, 50, 100, 50, 500],
+  welcome:     [100, 50, 200, 50, 300],
+};
+
+function vibrate(pattern) {
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate(pattern); } catch (_) {}
+  }
+}
+
 // ── State ────────────────────────────────────────────────────
 let state = {
   currentYear:  new Date().getFullYear(),
   currentMonth: new Date().getMonth() + 1,
-  events:       {},   // keyed by 'YYYY-MM-DD'
+  events:       {},
   editingId:    null,
   selectedDate: null,
+  swRegistration: null,
+  pushSubscription: null,
 };
 
 const MONTHS_ES = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
 ];
+
+// Mexican holidays client-side (for calendar highlighting + day modal)
+const HOLIDAYS_CLIENT = {
+  '01-01': { title: '🎊 Año Nuevo',                emoji: '🎊', color: '#f7a52b' },
+  '02-05': { title: '🇲🇽 Día de la Constitución',  emoji: '🇲🇽', color: '#2980b9' },
+  '02-14': { title: '💕 San Valentín',              emoji: '💕', color: '#e94d7f' },
+  '03-08': { title: '🌷 Día de la Mujer',           emoji: '🌷', color: '#9b59b6' },
+  '03-21': { title: '🦅 Natalicio de Juárez',       emoji: '🦅', color: '#2980b9' },
+  '04-30': { title: '👶 Día del Niño',              emoji: '👶', color: '#f7a52b' },
+  '05-01': { title: '💪 Día del Trabajo',           emoji: '💪', color: '#27ae60' },
+  '05-10': { title: '🌸 Día de las Madres',         emoji: '🌸', color: '#e94d7f' },
+  '09-15': { title: '🎉 Víspera de Independencia',  emoji: '🎉', color: '#c41e8f' },
+  '09-16': { title: '🇲🇽 Independencia de México',  emoji: '🇲🇽', color: '#27ae60' },
+  '10-31': { title: '🎃 Halloween',                 emoji: '🎃', color: '#f7a52b' },
+  '11-01': { title: '🌼 Día de Todos Santos',       emoji: '🌼', color: '#9b59b6' },
+  '11-02': { title: '💀 Día de Muertos',            emoji: '💀', color: '#9b59b6' },
+  '11-20': { title: '🇲🇽 Día de la Revolución',     emoji: '🇲🇽', color: '#2980b9' },
+  '12-12': { title: '🙏 Virgen de Guadalupe',       emoji: '🙏', color: '#c41e8f' },
+  '12-24': { title: '🎄 Nochebuena',                emoji: '🎄', color: '#27ae60' },
+  '12-25': { title: '🎅 Navidad',                   emoji: '🎅', color: '#e94d7f' },
+  '12-31': { title: '🥂 Fin de Año',                emoji: '🥂', color: '#d4a843' },
+};
 
 // ── API helpers ──────────────────────────────────────────────
 async function apiFetch(action, opts = {}) {
@@ -44,14 +86,13 @@ function renderCalendar() {
   document.getElementById('yearBadge').textContent = y;
 
   const grid      = document.getElementById('daysGrid');
-  const firstDay  = new Date(y, m - 1, 1).getDay();  // 0=Sun
+  const firstDay  = new Date(y, m - 1, 1).getDay();
   const daysInMon = new Date(y, m, 0).getDate();
   const today     = new Date();
   const todayStr  = fmtDate(today);
 
   grid.innerHTML = '';
 
-  // Leading empty cells
   for (let i = 0; i < firstDay; i++) {
     const el = document.createElement('div');
     el.className = 'day-cell empty';
@@ -60,21 +101,28 @@ function renderCalendar() {
 
   for (let d = 1; d <= daysInMon; d++) {
     const dateStr = `${y}-${pad(m)}-${pad(d)}`;
-    const dayDate = new Date(y, m - 1, d);
-    const dow     = dayDate.getDay();
+    const dow     = new Date(y, m - 1, d).getDay();
+    const mmdd    = `${pad(m)}-${pad(d)}`;
+    const holiday = HOLIDAYS_CLIENT[mmdd];
 
     const cell = document.createElement('div');
     cell.className = 'day-cell';
-    if (dateStr === todayStr)     cell.classList.add('today');
-    if (dow === 0 || dow === 6)   cell.classList.add('weekend');
-    if (state.events[dateStr])    cell.classList.add('has-events');
+    if (dateStr === todayStr)   cell.classList.add('today');
+    if (dow === 0 || dow === 6) cell.classList.add('weekend');
+    if (state.events[dateStr])  cell.classList.add('has-events');
+    if (holiday)                cell.classList.add('has-holiday');
 
     const numEl = document.createElement('span');
     numEl.className = 'day-num';
     numEl.textContent = d;
     cell.appendChild(numEl);
 
-    if (state.events[dateStr]) {
+    if (holiday) {
+      const hEl = document.createElement('span');
+      hEl.className = 'day-holiday-dot';
+      hEl.textContent = holiday.emoji;
+      cell.appendChild(hEl);
+    } else if (state.events[dateStr]) {
       const dots = document.createElement('div');
       dots.className = 'event-dots';
       state.events[dateStr].slice(0, 3).forEach(ev => {
@@ -86,20 +134,48 @@ function renderCalendar() {
       cell.appendChild(dots);
     }
 
-    cell.addEventListener('click', () => openDayModal(dateStr));
+    cell.addEventListener('click', () => {
+      vibrate(VIBRATE.gentle);
+      openDayModal(dateStr);
+    });
     grid.appendChild(cell);
   }
 
   renderTodayStrip(todayStr);
+  checkTodayHoliday();
+}
+
+// ── Today Holiday Banner ─────────────────────────────────────
+function checkTodayHoliday() {
+  const today = new Date();
+  const mmdd  = `${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const h     = HOLIDAYS_CLIENT[mmdd];
+  const strip = document.getElementById('holidayStrip');
+
+  if (h) {
+    document.getElementById('holidayEmoji').textContent = h.emoji;
+    document.getElementById('holidayTitle').textContent = h.title;
+    document.getElementById('holidayDesc').textContent  = '¡Hoy es un día especial!';
+    strip.style.display = '';
+    strip.style.borderColor = h.color + '55';
+    // Vibrate on holiday day
+    setTimeout(() => vibrate(VIBRATE.holiday), 800);
+  } else {
+    strip.style.display = 'none';
+  }
+
+  document.getElementById('holidayVibrateBtn')?.addEventListener('click', () => {
+    vibrate(VIBRATE.celebrate);
+    toast('¡Vamos a celebrar! 🎉');
+  });
 }
 
 // ── Today Strip ──────────────────────────────────────────────
 function renderTodayStrip(todayStr) {
-  const strip     = document.getElementById('stripEvents');
-  const stripDate = document.getElementById('stripDate');
+  const strip = document.getElementById('stripEvents');
+  const date  = document.getElementById('stripDate');
 
-  const today = new Date();
-  stripDate.textContent = today.toLocaleDateString('es-MX', {
+  date.textContent = new Date().toLocaleDateString('es-MX', {
     weekday: 'long', day: 'numeric', month: 'long'
   });
 
@@ -110,7 +186,6 @@ function renderTodayStrip(todayStr) {
     strip.innerHTML = '<div class="empty-day"><span>✨</span><p>Sin eventos hoy</p></div>';
     return;
   }
-
   evs.forEach(ev => strip.appendChild(buildEventItem(ev)));
 }
 
@@ -126,21 +201,32 @@ function buildEventItem(ev) {
     </div>
     <span class="event-cat-badge">${catLabel(ev.category)}</span>
   `;
-  item.addEventListener('click', () => openEditModal(ev));
+  item.addEventListener('click', () => { vibrate(VIBRATE.gentle); openEditModal(ev); });
   return item;
 }
 
 // ── Day Modal ────────────────────────────────────────────────
 async function openDayModal(dateStr) {
   state.selectedDate = dateStr;
-  const evs  = await getDayEvents(dateStr);
-  const d    = new Date(dateStr + 'T00:00:00');
-  const list = document.getElementById('dayEventsList');
+  const evs   = await getDayEvents(dateStr);
+  const d     = new Date(dateStr + 'T00:00:00');
+  const list  = document.getElementById('dayEventsList');
   const title = document.getElementById('dayModalTitle');
+  const mmdd  = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const h     = HOLIDAYS_CLIENT[mmdd];
 
   title.textContent = d.toLocaleDateString('es-MX', {
     weekday: 'long', day: 'numeric', month: 'long'
   }) + ' 📅';
+
+  const banner = document.getElementById('dayHolidayBanner');
+  if (h) {
+    banner.style.display = '';
+    banner.innerHTML = `<span>${h.emoji}</span><strong>${h.title}</strong>`;
+    banner.style.borderColor = (h.color || '#e94d7f') + '66';
+  } else {
+    banner.style.display = 'none';
+  }
 
   list.innerHTML = '';
   if (!evs || evs.length === 0) {
@@ -176,6 +262,7 @@ async function openDayModal(dateStr) {
       row.querySelector('.btn-icon.delete').addEventListener('click', async e => {
         e.stopPropagation();
         if (confirm(`¿Eliminar "${ev.title}"?`)) {
+          vibrate(VIBRATE.gentle);
           await apiFetch(`delete_event&id=${ev.id}`);
           await refreshEvents(); closeModal('dayModal'); toast('Evento eliminado 💔');
         }
@@ -187,7 +274,7 @@ async function openDayModal(dateStr) {
   openModal('dayModal');
 }
 
-// ── Event Modal (add / edit) ─────────────────────────────────
+// ── Event Modal ──────────────────────────────────────────────
 function openAddModal(date = null) {
   state.editingId = null;
   document.getElementById('eventModalTitle').textContent = 'Nuevo Evento ✨';
@@ -198,7 +285,6 @@ function openAddModal(date = null) {
   document.getElementById('eventDate').value = date || fmtDate(new Date());
   document.getElementById('eventTime').value = '';
   document.getElementById('eventDesc').value = '';
-
   setCatActive('love');
   openModal('eventModal');
 }
@@ -213,22 +299,19 @@ function openEditModal(ev) {
   document.getElementById('eventDate').value = ev.date;
   document.getElementById('eventTime').value = ev.time || '';
   document.getElementById('eventDesc').value = ev.description || '';
-
   setCatActive(ev.category || 'love');
   openModal('eventModal');
 }
 
 function setCatActive(cat) {
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.cat === cat);
-  });
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
 }
 
 // ── Form Submit ──────────────────────────────────────────────
 document.getElementById('eventForm').addEventListener('submit', async e => {
   e.preventDefault();
   const activeCat = document.querySelector('.cat-btn.active');
-  const payload = {
+  const payload   = {
     title:       document.getElementById('eventTitle').value.trim(),
     date:        document.getElementById('eventDate').value,
     time:        document.getElementById('eventTime').value || null,
@@ -239,6 +322,8 @@ document.getElementById('eventForm').addEventListener('submit', async e => {
   };
 
   const id = document.getElementById('eventId').value;
+  vibrate(VIBRATE.event);
+
   if (id) {
     payload.id = parseInt(id);
     await apiFetch('update_event', { method: 'POST', body: JSON.stringify(payload) });
@@ -255,6 +340,7 @@ document.getElementById('eventForm').addEventListener('submit', async e => {
 document.getElementById('deleteEventBtn').addEventListener('click', async () => {
   const id = document.getElementById('eventId').value;
   if (id && confirm('¿Eliminar este evento?')) {
+    vibrate(VIBRATE.gentle);
     await apiFetch(`delete_event&id=${id}`);
     closeModal('eventModal');
     await refreshEvents();
@@ -266,12 +352,13 @@ document.getElementById('deleteEventBtn').addEventListener('click', async () => 
 document.getElementById('noteForm').addEventListener('submit', async e => {
   e.preventDefault();
   const activeMood = document.querySelector('.mood-btn.active');
-  const payload = {
+  const payload    = {
     title:   document.getElementById('noteTitle').value.trim(),
     content: document.getElementById('noteContent').value.trim(),
     date:    fmtDate(new Date()),
     mood:    activeMood?.dataset.mood || 'happy',
   };
+  vibrate(VIBRATE.love);
   await apiFetch('add_note', { method: 'POST', body: JSON.stringify(payload) });
   closeModal('noteModal');
   document.getElementById('noteForm').reset();
@@ -291,8 +378,8 @@ async function loadNotes() {
     return;
   }
 
+  const moodMap = { happy:'😊', love:'🥰', excited:'🎉', nostalgic:'🌙' };
   notes.forEach(n => {
-    const moodMap = { happy:'😊', love:'🥰', excited:'🎉', nostalgic:'🌙' };
     const card = document.createElement('div');
     card.className = 'note-card';
     card.innerHTML = `
@@ -310,6 +397,7 @@ async function loadNotes() {
     `;
     card.querySelector('.note-delete').addEventListener('click', async () => {
       if (confirm('¿Eliminar esta nota?')) {
+        vibrate(VIBRATE.gentle);
         await apiFetch(`delete_note&id=${n.id}`);
         await loadNotes();
         toast('Nota eliminada');
@@ -319,8 +407,158 @@ async function loadNotes() {
   });
 }
 
+// ── Push Notifications ───────────────────────────────────────
+async function initPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('Push no soportado en este navegador');
+    return;
+  }
+
+  try {
+    // Register service worker
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    state.swRegistration = reg;
+    console.log('SW registrado:', reg.scope);
+
+    updateNotifyStatusIcon();
+
+    // Check existing subscription
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      state.pushSubscription = existing;
+      updateNotifyStatusIcon();
+      // Check today's notifications
+      triggerDailyCheck();
+      return;
+    }
+
+    // Show permission banner if not denied
+    const perm = Notification.permission;
+    if (perm === 'default') {
+      showNotifBanner();
+    } else if (perm === 'granted') {
+      await subscribeToPush();
+      triggerDailyCheck();
+    }
+  } catch (err) {
+    console.error('SW error:', err);
+  }
+}
+
+function showNotifBanner() {
+  const banner = document.getElementById('notifBanner');
+  setTimeout(() => banner.classList.add('show'), 1500);
+}
+
+document.getElementById('notifAllow')?.addEventListener('click', async () => {
+  vibrate(VIBRATE.gentle);
+  document.getElementById('notifBanner').classList.remove('show');
+  await requestAndSubscribe();
+});
+
+document.getElementById('notifDismiss')?.addEventListener('click', () => {
+  document.getElementById('notifBanner').classList.remove('show');
+  localStorage.setItem('notif_dismissed', Date.now());
+});
+
+document.getElementById('btnNotifyStatus')?.addEventListener('click', async () => {
+  const perm = Notification.permission;
+  if (perm === 'granted' && state.pushSubscription) {
+    toast('🔔 Notificaciones activas ✓');
+    vibrate(VIBRATE.gentle);
+    // Trigger immediate check
+    triggerDailyCheck();
+  } else if (perm === 'denied') {
+    toast('🔕 Notificaciones bloqueadas en ajustes del navegador');
+  } else {
+    await requestAndSubscribe();
+  }
+});
+
+async function requestAndSubscribe() {
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    vibrate(VIBRATE.welcome);
+    await subscribeToPush();
+    triggerDailyCheck();
+    toast('🔔 ¡Notificaciones activadas! 💖');
+    updateNotifyStatusIcon();
+  } else {
+    toast('🔕 Notificaciones no habilitadas');
+  }
+}
+
+async function subscribeToPush() {
+  if (!state.swRegistration) return;
+  try {
+    const vapidData = await apiFetch('get_vapid_key');
+    if (!vapidData?.publicKey) return;
+
+    const sub = await state.swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(vapidData.publicKey),
+    });
+
+    state.pushSubscription = sub;
+    const subJson = sub.toJSON();
+
+    await apiFetch('subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: subJson.endpoint,
+        keys: { p256dh: subJson.keys.p256dh, auth: subJson.keys.auth },
+      }),
+    });
+
+    updateNotifyStatusIcon();
+  } catch (err) {
+    console.error('Push subscribe error:', err);
+    toast('No se pudo activar las notificaciones');
+  }
+}
+
+function updateNotifyStatusIcon() {
+  const btn  = document.getElementById('btnNotifyStatus');
+  const icon = document.getElementById('notifyStatusIcon');
+  if (!btn || !icon) return;
+  btn.style.display = '';
+  const perm = Notification.permission;
+  if (perm === 'granted' && state.pushSubscription) {
+    icon.textContent = '🔔';
+    btn.title = 'Notificaciones activas';
+  } else {
+    icon.textContent = '🔕';
+    btn.title = 'Activar notificaciones';
+  }
+}
+
+async function triggerDailyCheck() {
+  try {
+    const data = await apiFetch('check_notify', { method: 'POST' });
+    if (data.notifications > 0) {
+      console.log(`Enviadas ${data.notifications} notificaciones para hoy`);
+    }
+  } catch (_) {}
+}
+
+function urlB64ToUint8Array(base64String) {
+  const padding  = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64   = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData  = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+// ── In-app vibrate on notification (from SW) ─────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'vibrate') {
+      vibrate(event.data.pattern || VIBRATE.event);
+    }
+  });
+}
+
 // ── Modal helpers ────────────────────────────────────────────
-function openModal(id) {
+function openModal(id)  {
   document.getElementById(id).classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -329,9 +567,8 @@ function closeModal(id) {
   document.body.style.overflow = '';
 }
 
-// Close on overlay click
 document.querySelectorAll('.modal-overlay').forEach(ov => {
-  ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); });
+  ov.addEventListener('click', e => { if (e.target === ov) { vibrate(VIBRATE.gentle); closeModal(ov.id); } });
 });
 
 document.getElementById('closeEventModal').addEventListener('click', () => closeModal('eventModal'));
@@ -340,36 +577,39 @@ document.getElementById('closeDayModal').addEventListener('click',   () => close
 document.getElementById('closeNoteModal').addEventListener('click',  () => closeModal('noteModal'));
 document.getElementById('cancelNoteBtn').addEventListener('click',   () => closeModal('noteModal'));
 
-document.getElementById('btnAddEvent').addEventListener('click', () => openAddModal());
-document.getElementById('btnAddNote').addEventListener('click',  () => openModal('noteModal'));
+document.getElementById('btnAddEvent').addEventListener('click', () => { vibrate(VIBRATE.gentle); openAddModal(); });
+document.getElementById('btnAddNote').addEventListener('click',  () => { vibrate(VIBRATE.gentle); openModal('noteModal'); });
 
 document.getElementById('btnAddInDay').addEventListener('click', () => {
   const d = state.selectedDate;
+  vibrate(VIBRATE.gentle);
   closeModal('dayModal');
   openAddModal(d);
 });
 
-// Month navigation
+// Month nav
 document.getElementById('prevMonth').addEventListener('click', async () => {
+  vibrate(VIBRATE.gentle);
   if (--state.currentMonth < 1) { state.currentMonth = 12; state.currentYear--; }
   await refreshEvents();
 });
 document.getElementById('nextMonth').addEventListener('click', async () => {
+  vibrate(VIBRATE.gentle);
   if (++state.currentMonth > 12) { state.currentMonth = 1; state.currentYear++; }
   await refreshEvents();
 });
 
-// Category buttons
+// Category / mood buttons
 document.querySelectorAll('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    vibrate(VIBRATE.gentle);
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
 });
-
-// Mood buttons
 document.querySelectorAll('.mood-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    vibrate(VIBRATE.gentle);
     document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
@@ -387,29 +627,24 @@ function toast(msg) {
   if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2400);
+  setTimeout(() => el.classList.remove('show'), 2600);
 }
 
 // ── Particles ────────────────────────────────────────────────
 function spawnParticles() {
   const container = document.getElementById('particles');
-  const hearts = ['❤️','💖','💕','🌹','✨','💗','💓'];
+  const hearts    = ['❤️','💖','💕','🌹','✨','💗','💓','🌸'];
   for (let i = 0; i < 18; i++) {
     const p = document.createElement('div');
     p.className = 'particle heart';
-    p.style.cssText = `
-      left: ${Math.random() * 100}%;
-      --dur: ${6 + Math.random() * 8}s;
-      --delay: ${Math.random() * 10}s;
-      --size: ${9 + Math.random() * 8}px;
-    `;
+    p.style.cssText = `left:${Math.random()*100}%;--dur:${6+Math.random()*8}s;--delay:${Math.random()*10}s;--size:${9+Math.random()*8}px;`;
     p.textContent = hearts[Math.floor(Math.random() * hearts.length)];
     container.appendChild(p);
   }
 }
 
 // ── Utilities ────────────────────────────────────────────────
-function pad(n) { return String(n).padStart(2, '0'); }
+function pad(n)   { return String(n).padStart(2, '0'); }
 function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -421,8 +656,7 @@ function catLabel(cat) {
 }
 function formatDate(str) {
   if (!str) return '';
-  const d = new Date(str);
-  return d.toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
+  return new Date(str).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
 }
 
 // ── Init ─────────────────────────────────────────────────────
@@ -430,4 +664,5 @@ function formatDate(str) {
   spawnParticles();
   await refreshEvents();
   await loadNotes();
+  await initPushNotifications();
 })();

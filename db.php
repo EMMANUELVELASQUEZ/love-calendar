@@ -30,6 +30,27 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS notify_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        log_date DATE NOT NULL,
+        type TEXT NOT NULL,
+        ref_id TEXT,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+
 } catch (PDOException $e) {
     http_response_code(500);
     die(json_encode(['error' => $e->getMessage()]));

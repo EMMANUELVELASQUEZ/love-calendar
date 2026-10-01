@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#120810">
+  <link rel="manifest" href="manifest.json">
   <title>Mi Calendario de Amor 💖</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +18,17 @@
   <!-- Particles -->
   <div class="particles" id="particles"></div>
 
+  <!-- Notification Permission Banner -->
+  <div class="notif-banner" id="notifBanner">
+    <div class="notif-banner-icon">🔔</div>
+    <div class="notif-banner-text">
+      <strong>Activa los recordatorios</strong>
+      <span>Te avisaremos de eventos y días especiales</span>
+    </div>
+    <button class="notif-banner-allow" id="notifAllow">Activar</button>
+    <button class="notif-banner-dismiss" id="notifDismiss">✕</button>
+  </div>
+
   <!-- App Shell -->
   <div class="app">
 
@@ -27,18 +39,36 @@
           <span class="header-script">Mi Calendario</span>
           <span class="header-heart">💖</span>
         </div>
-        <button class="btn-add-event" id="btnAddEvent" title="Agregar evento">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
+        <div class="header-actions">
+          <button class="btn-notify-status" id="btnNotifyStatus" title="Estado de notificaciones" style="display:none">
+            <span id="notifyStatusIcon">🔕</span>
+          </button>
+          <button class="btn-add-event" id="btnAddEvent" title="Agregar evento">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
       </div>
     </header>
 
     <!-- Main Content -->
     <main class="app-main">
 
+      <!-- Holiday Strip (shown when today is a holiday) -->
+      <div class="holiday-strip" id="holidayStrip" style="display:none">
+        <div class="holiday-strip-inner">
+          <span class="holiday-emoji" id="holidayEmoji">🎊</span>
+          <div class="holiday-text">
+            <strong id="holidayTitle">Día festivo</strong>
+            <span id="holidayDesc"></span>
+          </div>
+          <button class="holiday-vibrate-btn" id="holidayVibrateBtn" title="¡Celebrar!">
+            🎉
+          </button>
+        </div>
+      </div>
+
       <!-- Calendar Card -->
       <section class="calendar-card">
-        <!-- Month Navigation -->
         <div class="month-nav">
           <button class="nav-btn" id="prevMonth">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -52,13 +82,10 @@
           </button>
         </div>
 
-        <!-- Weekday headers -->
         <div class="weekdays">
           <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span>
           <span>Jue</span><span>Vie</span><span>Sáb</span>
         </div>
-
-        <!-- Days Grid -->
         <div class="days-grid" id="daysGrid"></div>
       </section>
 
@@ -69,10 +96,7 @@
           <span class="strip-date" id="stripDate"></span>
         </div>
         <div class="strip-events" id="stripEvents">
-          <div class="empty-day">
-            <span>✨</span>
-            <p>Sin eventos hoy</p>
-          </div>
+          <div class="empty-day"><span>✨</span><p>Sin eventos hoy</p></div>
         </div>
       </section>
 
@@ -86,10 +110,7 @@
           <button class="btn-add-note" id="btnAddNote">Agregar nota</button>
         </div>
         <div class="notes-grid" id="notesGrid">
-          <div class="notes-empty">
-            <span>🌹</span>
-            <p>Escribe tu primera nota de amor</p>
-          </div>
+          <div class="notes-empty"><span>🌹</span><p>Escribe tu primera nota de amor</p></div>
         </div>
       </section>
 
@@ -108,7 +129,7 @@
     </nav>
   </div>
 
-  <!-- ── ADD EVENT MODAL ──────────────────────────────────── -->
+  <!-- ── ADD EVENT MODAL ─────────────────────────────────── -->
   <div class="modal-overlay" id="eventModal">
     <div class="modal">
       <div class="modal-header">
@@ -119,12 +140,10 @@
       </div>
       <form class="modal-form" id="eventForm">
         <input type="hidden" id="eventId">
-
         <div class="form-group">
           <label class="form-label">Título</label>
           <input type="text" class="form-input" id="eventTitle" placeholder="¿Qué celebramos? 💖" required>
         </div>
-
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Fecha</label>
@@ -135,38 +154,41 @@
             <input type="time" class="form-input" id="eventTime">
           </div>
         </div>
-
         <div class="form-group">
           <label class="form-label">Categoría</label>
           <div class="category-grid" id="categoryGrid">
-            <button type="button" class="cat-btn active" data-cat="love" data-emoji="❤️" data-color="#e94d7f">❤️ Amor</button>
-            <button type="button" class="cat-btn" data-cat="anniversary" data-emoji="💑" data-color="#c41e8f">💑 Aniversario</button>
-            <button type="button" class="cat-btn" data-cat="birthday" data-emoji="🎂" data-color="#f7a52b">🎂 Cumpleaños</button>
-            <button type="button" class="cat-btn" data-cat="date" data-emoji="🌹" data-color="#b5373c">🌹 Cita</button>
-            <button type="button" class="cat-btn" data-cat="special" data-emoji="⭐" data-color="#9b59b6">⭐ Especial</button>
-            <button type="button" class="cat-btn" data-cat="important" data-emoji="📌" data-color="#2980b9">📌 Importante</button>
+            <button type="button" class="cat-btn active" data-cat="love"        data-emoji="❤️" data-color="#e94d7f">❤️ Amor</button>
+            <button type="button" class="cat-btn"        data-cat="anniversary" data-emoji="💑" data-color="#c41e8f">💑 Aniversario</button>
+            <button type="button" class="cat-btn"        data-cat="birthday"    data-emoji="🎂" data-color="#f7a52b">🎂 Cumpleaños</button>
+            <button type="button" class="cat-btn"        data-cat="date"        data-emoji="🌹" data-color="#b5373c">🌹 Cita</button>
+            <button type="button" class="cat-btn"        data-cat="special"     data-emoji="⭐" data-color="#9b59b6">⭐ Especial</button>
+            <button type="button" class="cat-btn"        data-cat="important"   data-emoji="📌" data-color="#2980b9">📌 Importante</button>
           </div>
         </div>
-
         <div class="form-group">
           <label class="form-label">Descripción (opcional)</label>
           <textarea class="form-input form-textarea" id="eventDesc" placeholder="Escribe algo bonito... 🌸" rows="3"></textarea>
         </div>
-
+        <div class="form-group">
+          <label class="form-label">Recordatorio</label>
+          <select class="form-input" id="eventReminder">
+            <option value="same_day">El mismo día</option>
+            <option value="day_before">Un día antes</option>
+            <option value="none">Sin recordatorio</option>
+          </select>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" id="deleteEventBtn" style="display:none">Eliminar</button>
           <div class="form-actions-right">
             <button type="button" class="btn-ghost" id="cancelEventBtn">Cancelar</button>
-            <button type="submit" class="btn-primary">
-              <span id="eventSubmitLabel">Guardar</span>
-            </button>
+            <button type="submit" class="btn-primary"><span id="eventSubmitLabel">Guardar</span></button>
           </div>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ── DAY DETAIL MODAL ─────────────────────────────────── -->
+  <!-- ── DAY DETAIL MODAL ────────────────────────────────── -->
   <div class="modal-overlay" id="dayModal">
     <div class="modal modal-day">
       <div class="modal-header">
@@ -175,6 +197,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+      <div class="day-holiday-banner" id="dayHolidayBanner" style="display:none"></div>
       <div class="day-events-list" id="dayEventsList"></div>
       <button class="btn-add-in-day" id="btnAddInDay">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -183,7 +206,7 @@
     </div>
   </div>
 
-  <!-- ── ADD NOTE MODAL ───────────────────────────────────── -->
+  <!-- ── ADD NOTE MODAL ─────────────────────────────────── -->
   <div class="modal-overlay" id="noteModal">
     <div class="modal">
       <div class="modal-header">
@@ -205,9 +228,9 @@
           <label class="form-label">Estado de ánimo</label>
           <div class="mood-grid">
             <button type="button" class="mood-btn active" data-mood="happy">😊 Feliz</button>
-            <button type="button" class="mood-btn" data-mood="love">🥰 Enamorado</button>
-            <button type="button" class="mood-btn" data-mood="excited">🎉 Emocionado</button>
-            <button type="button" class="mood-btn" data-mood="nostalgic">🌙 Nostálgico</button>
+            <button type="button" class="mood-btn"        data-mood="love">🥰 Enamorado</button>
+            <button type="button" class="mood-btn"        data-mood="excited">🎉 Emocionado</button>
+            <button type="button" class="mood-btn"        data-mood="nostalgic">🌙 Nostálgico</button>
           </div>
         </div>
         <div class="form-actions">

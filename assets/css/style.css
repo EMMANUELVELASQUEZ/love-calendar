@@ -671,6 +671,121 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .btn-icon:hover { border-color: var(--border-glow); color: var(--rose-light); }
 .btn-icon.delete:hover { border-color: rgba(220,53,69,0.4); color: #e74c7c; }
 
+/* ── Notification Permission Banner ─────────────────────── */
+.notif-banner {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateY(-120%);
+  width: 100%; max-width: 480px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(135deg, #2a1028, #1a0a1e);
+  border-bottom: 1px solid var(--border-glow);
+  z-index: 200;
+  transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.notif-banner.show { transform: translateX(-50%) translateY(0); }
+.notif-banner-icon { font-size: 1.5rem; flex-shrink: 0; }
+.notif-banner-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.notif-banner-text strong { font-size: 0.88rem; color: var(--text-primary); }
+.notif-banner-text span   { font-size: 0.76rem; color: var(--text-sec); }
+.notif-banner-allow {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, var(--rose), var(--rose-dark));
+  color: white;
+  font-family: inherit; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+.notif-banner-allow:active { transform: scale(0.95); }
+.notif-banner-dismiss {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+.notif-banner-dismiss:hover { color: var(--text-sec); }
+
+/* ── Notification Status Button ──────────────────────────── */
+.header-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+.btn-notify-status {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card-2);
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-notify-status:hover { border-color: var(--border-glow); }
+.btn-notify-status:active { transform: scale(0.9); }
+
+/* ── Holiday Strip ───────────────────────────────────────── */
+.holiday-strip {
+  background: linear-gradient(135deg, rgba(233,77,127,0.1), rgba(212,168,67,0.08));
+  border: 1px solid rgba(233,77,127,0.25);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  animation: slide-in 0.4s ease;
+}
+.holiday-strip-inner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+}
+.holiday-emoji  { font-size: 1.8rem; flex-shrink: 0; }
+.holiday-text   { flex: 1; min-width: 0; }
+.holiday-text strong { display: block; font-size: 0.92rem; color: var(--text-primary); }
+.holiday-text span   { font-size: 0.78rem; color: var(--text-sec); }
+.holiday-vibrate-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(212,168,67,0.35);
+  background: rgba(212,168,67,0.1);
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  animation: pulse-heart 2.5s ease-in-out infinite;
+}
+.holiday-vibrate-btn:active { transform: scale(0.85); }
+
+/* ── Holiday dot on calendar cell ────────────────────────── */
+.day-cell.has-holiday { background: rgba(212,168,67,0.06); }
+.day-cell.has-holiday .day-num { color: var(--gold-light); }
+.day-holiday-dot {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* ── Day modal holiday banner ────────────────────────────── */
+.day-holiday-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: rgba(212,168,67,0.1);
+  border: 1px solid rgba(212,168,67,0.25);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  font-size: 0.88rem; color: var(--gold-light);
+}
+.day-holiday-banner span { font-size: 1.2rem; }
+
 /* ── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
